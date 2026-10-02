@@ -1,0 +1,390 @@
+{
+  "version": 1,
+  "capabilities": [
+    "retrieval",
+    "tools",
+    "writes",
+    "memory",
+    "code-execution",
+    "mcp",
+    "multi-agent"
+  ],
+  "note": "Engineering prompts, not automatic findings. Unknown capabilities need evidence. Mitigations require system-specific design.",
+  "domains": [
+    {
+      "id": "task-scope",
+      "title": "Task success and scope",
+      "applies_to": [
+        "always"
+      ],
+      "questions": [
+        "How is actual task completion verified?",
+        "Which tasks are ambiguous or forbidden?",
+        "When must execution clarify, stop or escalate?"
+      ],
+      "mitigation_candidates": [
+        "Outcome-based evaluations",
+        "Enforced task/action boundaries"
+      ],
+      "source_ids": [
+        "ANTHROPIC-EVAL",
+        "ANTHROPIC-AGENTS"
+      ]
+    },
+    {
+      "id": "planning",
+      "title": "Planning, context and termination",
+      "applies_to": [
+        "always"
+      ],
+      "questions": [
+        "What prerequisites hold before actions?",
+        "What if context truncation loses constraints?",
+        "What bounds steps, progress and elapsed time?"
+      ],
+      "mitigation_candidates": [
+        "Authoritative constraint state",
+        "Run budgets and terminal states"
+      ],
+      "source_ids": [
+        "ANTHROPIC-AGENTS"
+      ]
+    },
+    {
+      "id": "retrieval",
+      "title": "Retrieval integrity",
+      "applies_to": [
+        "retrieval"
+      ],
+      "questions": [
+        "How are provenance and freshness checked?",
+        "How are missing or conflicting sources handled?",
+        "How do deletion and permissions propagate to indexes/caches?"
+      ],
+      "mitigation_candidates": [
+        "Scoped retrieval and caches",
+        "Evidence freshness/provenance checks"
+      ],
+      "source_ids": [
+        "OWASP-RAG"
+      ]
+    },
+    {
+      "id": "injection",
+      "title": "Prompt injection and goal hijacking",
+      "applies_to": [
+        "always"
+      ],
+      "questions": [
+        "Which inputs influence planning?",
+        "Can untrusted content change goals or destinations?",
+        "What constrains actions if detection fails?"
+      ],
+      "mitigation_candidates": [
+        "Instruction/data separation",
+        "Independent execution containment"
+      ],
+      "source_ids": [
+        "OWASP-INJECTION"
+      ]
+    },
+    {
+      "id": "authorization",
+      "title": "Identity and tenant isolation",
+      "applies_to": [
+        "always"
+      ],
+      "questions": [
+        "Which identity/authority governs execution?",
+        "Where are resource and tenant permissions checked?",
+        "What happens on revocation or policy-service failure?"
+      ],
+      "mitigation_candidates": [
+        "Least privilege",
+        "Execution-boundary authorization"
+      ],
+      "source_ids": [
+        "OWASP-AUTH"
+      ]
+    },
+    {
+      "id": "tools",
+      "title": "Tool contracts",
+      "applies_to": [
+        "tools"
+      ],
+      "questions": [
+        "Are arguments semantically validated?",
+        "Can paths, queries or destinations escape constraints?",
+        "Are partial results distinct from success?"
+      ],
+      "mitigation_candidates": [
+        "Constrained interfaces",
+        "Explicit execution outcome contracts"
+      ],
+      "source_ids": [
+        "OWASP-AGENT",
+        "OWASP-RAG"
+      ]
+    },
+    {
+      "id": "sandbox",
+      "title": "Code execution containment",
+      "applies_to": [
+        "code-execution"
+      ],
+      "questions": [
+        "What filesystem/process/network authority exists?",
+        "What enforces resource limits and isolation?",
+        "Can output become unsafe executable input downstream?"
+      ],
+      "mitigation_candidates": [
+        "Isolated execution",
+        "Safe interpreter boundaries"
+      ],
+      "source_ids": [
+        "OWASP-AGENT"
+      ]
+    },
+    {
+      "id": "guardrails",
+      "title": "Guardrails and approval integrity",
+      "applies_to": [
+        "always"
+      ],
+      "questions": [
+        "Where are controls enforced?",
+        "Can fallback/resume bypass them?",
+        "What happens when checks fail or overblock?",
+        "Is approval bound to exact action parameters and expiry?"
+      ],
+      "mitigation_candidates": [
+        "Layered enforcement",
+        "Exact-action independent approval validation"
+      ],
+      "source_ids": [
+        "OWASP-AGENT"
+      ]
+    },
+    {
+      "id": "retries",
+      "title": "Retries and ambiguous outcomes",
+      "applies_to": [
+        "writes"
+      ],
+      "questions": [
+        "Can a timed-out action have committed?",
+        "What are idempotency scope and key lifetime?",
+        "Are retries bounded across layers?"
+      ],
+      "mitigation_candidates": [
+        "Outcome reconciliation",
+        "Supported idempotency and bounded retries"
+      ],
+      "source_ids": [
+        "AWS-RETRY",
+        "AWS-TIMEOUT"
+      ]
+    },
+    {
+      "id": "state",
+      "title": "Partial completion and concurrent state",
+      "applies_to": [
+        "writes"
+      ],
+      "questions": [
+        "Where is execution state checkpointed?",
+        "How are stale/concurrent writes detected?",
+        "What if compensation fails or actions are irreversible?",
+        "How are restart/cancellation and in-flight actions reconciled?"
+      ],
+      "mitigation_candidates": [
+        "Explicit step state",
+        "Concurrency and recovery design"
+      ],
+      "source_ids": [
+        "AWS-RETRY",
+        "SRE-CASCADE"
+      ]
+    },
+    {
+      "id": "capacity",
+      "title": "Capacity and cascading failure",
+      "applies_to": [
+        "always"
+      ],
+      "questions": [
+        "What bounds queues, concurrency, fan-out and latency?",
+        "How are slow dependencies isolated?",
+        "Does cancellation stop resource use?",
+        "How is overload handled without unsafe fallback?"
+      ],
+      "mitigation_candidates": [
+        "Resource budgets",
+        "Dependency isolation and load shedding"
+      ],
+      "source_ids": [
+        "AWS-TIMEOUT",
+        "SRE-CASCADE"
+      ]
+    },
+    {
+      "id": "cost",
+      "title": "Cost exhaustion",
+      "applies_to": [
+        "always"
+      ],
+      "questions": [
+        "What bounds token/tool use and spend?",
+        "Can requests trigger recursive expensive work?",
+        "What happens when the budget expires?"
+      ],
+      "mitigation_candidates": [
+        "Runtime budgets",
+        "Per-tenant limits and alerts"
+      ],
+      "source_ids": [
+        "OWASP-OPS"
+      ]
+    },
+    {
+      "id": "memory",
+      "title": "Persistent memory contamination",
+      "applies_to": [
+        "memory"
+      ],
+      "questions": [
+        "Who writes memory and with what provenance?",
+        "How are tenants isolated and memory expired/deleted?",
+        "How is poisoned context recovered?"
+      ],
+      "mitigation_candidates": [
+        "Scoped validated persistence",
+        "Provenance and retention policies"
+      ],
+      "source_ids": [
+        "OWASP-AGENT"
+      ]
+    },
+    {
+      "id": "privacy",
+      "title": "Sensitive data movement",
+      "applies_to": [
+        "always"
+      ],
+      "questions": [
+        "What reaches context, services and logs?",
+        "Are destinations constrained and credentials protected?",
+        "How are retention/deletion/export rules enforced?"
+      ],
+      "mitigation_candidates": [
+        "Data minimization",
+        "Controlled egress and telemetry"
+      ],
+      "source_ids": [
+        "OWASP-RAG",
+        "OWASP-OPS"
+      ]
+    },
+    {
+      "id": "supply-chain",
+      "title": "Supply chain and capability changes",
+      "applies_to": [
+        "tools"
+      ],
+      "questions": [
+        "Are tool origins/descriptions/dependencies reviewed?",
+        "Can an update silently expand capability?",
+        "Can affected connectors be isolated/reverted?"
+      ],
+      "mitigation_candidates": [
+        "Trusted origins and versioning",
+        "Capability-change review"
+      ],
+      "source_ids": [
+        "OWASP-OPS",
+        "MCP-SECURITY"
+      ]
+    },
+    {
+      "id": "mcp",
+      "title": "MCP identity and connectors",
+      "applies_to": [
+        "mcp"
+      ],
+      "questions": [
+        "Are token audience, scope and delegation verified?",
+        "Are connector origins/outbound URLs constrained?",
+        "Is metadata treated as untrusted?"
+      ],
+      "mitigation_candidates": [
+        "Validated credential boundaries",
+        "Version-specific connector controls"
+      ],
+      "source_ids": [
+        "MCP-SECURITY"
+      ]
+    },
+    {
+      "id": "multi-agent",
+      "title": "Delegation and propagation",
+      "applies_to": [
+        "multi-agent"
+      ],
+      "questions": [
+        "Can delegation expand authority or recurse?",
+        "Are messages authenticated and scoped?",
+        "Can failure contaminate other agents/shared state?"
+      ],
+      "mitigation_candidates": [
+        "Bounded delegated authority",
+        "Isolated execution and validated messages"
+      ],
+      "source_ids": [
+        "OWASP-AGENT"
+      ]
+    },
+    {
+      "id": "eval-release",
+      "title": "Evaluation and rollout",
+      "applies_to": [
+        "always"
+      ],
+      "questions": [
+        "Do tests inspect outcomes, forbidden actions and state?",
+        "Are repeated trials and graders validated?",
+        "Are model/prompt/tool/policy versions identifiable?",
+        "Can releases be contained/reverted without replaying writes?"
+      ],
+      "mitigation_candidates": [
+        "Outcome/trajectory evaluations",
+        "Staged versioned rollout"
+      ],
+      "source_ids": [
+        "ANTHROPIC-EVAL",
+        "SRE-RELEASE"
+      ]
+    },
+    {
+      "id": "operations",
+      "title": "Observability and recovery",
+      "applies_to": [
+        "always"
+      ],
+      "questions": [
+        "Can execution be traced without exposing secrets?",
+        "Are incorrect outcomes detected alongside service errors?",
+        "Can tool execution be independently disabled?",
+        "Who owns reconciliation and are recovery procedures exercised?"
+      ],
+      "mitigation_candidates": [
+        "Action/state invariant monitoring",
+        "Scoped containment and recovery"
+      ],
+      "source_ids": [
+        "SRE-MONITOR",
+        "OWASP-OPS"
+      ]
+    }
+  ]
+}

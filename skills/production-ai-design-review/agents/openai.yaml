@@ -1,0 +1,4 @@
+interface:
+  display_name: "Production AI Design Review"
+  short_description: "Grounded agent reviews with mitigations and tests"
+  default_prompt: "Use $production-ai-design-review to review this architecture and produce evidence-grounded findings, mitigation actions and verification tests."
