@@ -4,7 +4,8 @@ A home for AI agent code, reusable skills, experiments and tools for building de
 
 ## Available now
 
-- [Production AI Design Review](docs/production-ai-design-review.md): an evidence-grounded review skill for production AI/LLM and agent systems, covering reliability, security, guardrails and operations, with mitigation actions and verification tests.
+- [Production AI Design Review](docs/production-ai-design-review.md): an evidence-grounded review skill for production AI/LLM and agent systems,
+  covering reliability, security, guardrails and operations, with mitigation actions and verification tests.
 
 ## Repository layout
 

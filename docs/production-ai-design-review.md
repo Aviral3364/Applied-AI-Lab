@@ -12,11 +12,13 @@ It connects reliability and security findings to concrete mitigations and verifi
 Use it for design or readiness reviews of systems where a model plans, retrieves, calls tools, writes state or delegates to other agents.
 
 It is **not** a general architecture review for non-AI services.
-Several domains (`capacity`, `privacy`, `eval-release`, `operations`) apply equally to the services supporting an AI system, and are reviewed where they affect the AI system's behaviour, authority or recovery.
+Several domains (`capacity`, `privacy`, `eval-release`, `operations`) apply equally to the services supporting an AI system,
+and are reviewed where they affect the AI system's behaviour, authority or recovery.
 
 ## What it reviews
 
-The question bank covers 19 domains: task success, planning, retrieval, prompt injection, authorization, tool contracts, execution containment, guardrails, retries, state consistency, capacity, cost, memory, privacy, supply chain, MCP, multi-agent delegation, evaluations/releases and operations.
+The question bank covers 19 domains: task success, planning, retrieval, prompt injection, authorization, tool contracts, execution containment, guardrails,
+retries, state consistency, capacity, cost, memory, privacy, supply chain, MCP, multi-agent delegation, evaluations/releases and operations.
 
 The reviewer selects relevant domains from the system's capabilities.
 It separates confirmed defects, plausible risks, evidence gaps and validated controls rather than turning every checklist question into a finding.
@@ -43,7 +45,9 @@ cp -R Applied-AI-Lab/skills/production-ai-design-review ~/.claude/skills/
 
 Example request:
 
-> Use production-ai-design-review to review this architecture. Identify evidence-grounded reliability and security risks, then propose prioritized mitigation actions and verification tests. Distinguish observed defects from missing evidence.
+> Use production-ai-design-review to review this architecture.
+> Identify evidence-grounded reliability and security risks, then propose prioritized mitigation actions and verification tests.
+> Distinguish observed defects from missing evidence.
 
 Supply the design or code you want reviewed, its intended tasks and action capabilities, and any relevant tests or configuration.
 Remove secrets and customer identifiers.

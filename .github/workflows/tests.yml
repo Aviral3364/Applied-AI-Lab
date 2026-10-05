@@ -22,3 +22,5 @@ jobs:
         run: python -m unittest discover -s tests -t . -v
       - name: Validate shipped example report
         run: python skills/production-ai-design-review/scripts/review_tools.py validate skills/production-ai-design-review/assets/example-review.json
+      - name: Doc line-length lint
+        run: python tools/lint_docs.py
