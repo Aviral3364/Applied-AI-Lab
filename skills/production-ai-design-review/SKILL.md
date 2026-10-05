@@ -1,11 +1,16 @@
 ---
 name: production-ai-design-review
-description: Review production AI and agent architectures, design documents, workflows or code for reliability, security, guardrails and operational risks. Produce evidence-grounded findings, prioritized mitigation actions and verification tests. Use for requested design/readiness reviews, not ordinary post editing or autonomous production changes.
+description: Review production AI/LLM and agent system architectures, design documents, workflows or code for reliability, security, guardrails and operational risks. Produce evidence-grounded findings, prioritized mitigation actions and verification tests. Use for requested design/readiness reviews of AI-powered systems. Not for general non-AI service architecture reviews, ordinary document editing or autonomous production changes.
+license: Apache-2.0
+compatibility: Optional helper scripts require Python 3.10+ (standard library only, no network access).
+metadata:
+  version: "1.1.0"
+  repository: "https://github.com/Aviral3364/Applied-AI-Lab"
 ---
 
 # Production AI Design Review
 
-Review with staff-level engineering judgment: trace the system, identify credible failure mechanisms, examine where controls are enforced, and propose the smallest effective mitigations. This portable skill is independent of a particular employer, framework, model vendor or LinkedIn post.
+Review with staff-level engineering judgment: trace the system, identify credible failure mechanisms, examine where controls are enforced, and propose the smallest effective mitigations. This portable skill is independent of any particular employer, framework or model vendor. It targets AI/LLM and agent systems; supporting infrastructure is in scope only where it affects the AI system's behaviour, authority or recovery.
 
 ## Essential rules
 
@@ -47,9 +52,8 @@ Python 3.10+ standard library only; no network calls, credentials, model calls o
 python3 scripts/review_tools.py questions --capability retrieval --capability writes
 python3 scripts/review_tools.py validate /path/to/review.json
 python3 scripts/review_tools.py render /path/to/review.json --output /path/to/review.md
-python3 -m unittest discover -s tests -v
 ```
 
-`questions` produces an applicable question bank, not findings. `validate` checks structural consistency, evidence labels, references and action/test linkage; it does not establish factual truth, source authority or safety. `render` validates before creating Markdown and refuses to overwrite an existing output. Treat reports as potentially sensitive; avoid secrets and customer identifiers in exports.
+`questions` produces an applicable question bank, not findings. `validate` checks structural consistency, evidence labels, catalog domains (or explicit `custom:<name>` domains), verdict consistency, references and action/test linkage; it does not establish factual truth, source authority or safety. `render` validates before creating Markdown and refuses to overwrite an existing output. Treat reports as potentially sensitive; avoid secrets and customer identifiers in exports.
 
-Read the [synthetic example](examples/example-review.json) only when you need an output example. Its evidence and findings concern an invented system, never the system under review.
+Read the [synthetic example](assets/example-review.json) only when you need an output example. Its evidence and findings concern an invented system, never the system under review.

@@ -8,7 +8,8 @@ from pathlib import Path
 import tempfile
 import unittest
 
-ROOT = Path(__file__).resolve().parents[1]
+REPO = Path(__file__).resolve().parents[2]
+ROOT = REPO / "skills" / "production-ai-design-review"
 spec = importlib.util.spec_from_file_location("review_tools", ROOT / "scripts/review_tools.py")
 tools = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(tools)
@@ -16,7 +17,7 @@ spec.loader.exec_module(tools)
 
 class ReportTests(unittest.TestCase):
     def setUp(self):
-        self.report = json.loads((ROOT / "examples/example-review.json").read_text())
+        self.report = json.loads((ROOT / "assets/example-review.json").read_text())
 
     def rejected(self, fragment):
         errors = tools.validate_report(self.report)

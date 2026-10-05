@@ -48,6 +48,6 @@ IDs are nonempty unique strings within their record collection. References must 
 
 ## Usage
 
-The synthetic [example](../examples/example-review.json) shows a complete report with a mitigation, investigation action and proposed tests. It is an example of formatting, not a benchmark or universal architecture recommendation.
+The synthetic [example](../assets/example-review.json) shows a complete report with a mitigation, investigation action and proposed tests. It is an example of formatting, not a benchmark or universal architecture recommendation.
 
 `validate` checks record structure/linkage, evidence requirements and some contradictory claims. `render` performs the same check, escapes Markdown content and writes the report without overwriting. Neither tool inspects the target system, browses sources, assigns risks or guarantees report accuracy. Fix validation errors rather than deleting substantive findings to pass the helper.
