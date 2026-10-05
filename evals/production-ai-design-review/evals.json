@@ -1,0 +1,64 @@
+{
+  "skill_name": "production-ai-design-review",
+  "grading_note": "Structural expectations only. Domains are risk-catalog IDs. must_not_claim guards against fabricated findings; it does not grade prose quality.",
+  "evals": [
+    {
+      "id": 1,
+      "name": "idempotency-gap",
+      "prompt": "Use production-ai-design-review to review the attached refund agent design. Export the review as JSON following references/report-format.md.",
+      "files": ["cases/01-idempotency-gap.md"],
+      "expected_output": "Flags that timed-out issue_refund calls may have committed and are retried without an idempotency key or reconciliation (duplicate refunds). Notes the shared all-store credential. Does not invent MCP, memory, sandbox or multi-agent defects, and recognises the exact-parameter supervisor approval as an existing control.",
+      "grading": {
+        "must_find": [
+          {"domain": "retries", "classification_in": ["confirmed_defect", "plausible_risk"], "min_severity": "medium"}
+        ],
+        "must_not_claim": [
+          {"domain": "mcp", "classification": "confirmed_defect"},
+          {"domain": "memory", "classification": "confirmed_defect"},
+          {"domain": "sandbox", "classification": "confirmed_defect"},
+          {"domain": "multi-agent", "classification": "confirmed_defect"}
+        ],
+        "allowed_verdicts": ["requires_mitigation"]
+      }
+    },
+    {
+      "id": 2,
+      "name": "approval-param-drift",
+      "prompt": "Use production-ai-design-review to review the attached infrastructure scaling agent. Export the review as JSON following references/report-format.md.",
+      "files": ["cases/02-approval-param-drift.md"],
+      "expected_output": "Flags that approval is a session-wide boolean with no expiry, not bound to the exact tool and arguments, so later or changed writes execute unapproved. Flags cluster-admin on all clusters as excessive authority. Does not invent retrieval, memory, MCP or multi-agent defects.",
+      "grading": {
+        "must_find": [
+          {"domain": "guardrails", "classification_in": ["confirmed_defect"], "min_severity": "high"},
+          {"domain": "authorization", "classification_in": ["confirmed_defect", "plausible_risk"], "min_severity": "medium"}
+        ],
+        "must_not_claim": [
+          {"domain": "retrieval", "classification": "confirmed_defect"},
+          {"domain": "memory", "classification": "confirmed_defect"},
+          {"domain": "mcp", "classification": "confirmed_defect"},
+          {"domain": "multi-agent", "classification": "confirmed_defect"}
+        ],
+        "allowed_verdicts": ["requires_mitigation"]
+      }
+    },
+    {
+      "id": 3,
+      "name": "well-controlled",
+      "prompt": "Use production-ai-design-review to review the attached internal documentation assistant. Export the review as JSON following references/report-format.md.",
+      "files": ["cases/03-well-controlled.md"],
+      "expected_output": "Recognises evidenced controls (in-index ACL filtering with tests, gateway budgets, versioned canary releases). May raise low/medium items or evidence gaps (e.g. prompt injection via wiki content, the 15-minute revocation window) but no critical/high defects and no write/retry/state findings for a read-only system.",
+      "grading": {
+        "must_find": [],
+        "must_not_claim": [
+          {"domain": "retries"},
+          {"domain": "state"},
+          {"domain": "sandbox"},
+          {"domain": "mcp"},
+          {"domain": "multi-agent"}
+        ],
+        "max_severity": "medium",
+        "allowed_verdicts": ["no_blocker_observed", "requires_validation"]
+      }
+    }
+  ]
+}
