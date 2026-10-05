@@ -157,6 +157,69 @@ class ReportTests(unittest.TestCase):
             for source in domain["source_ids"]:
                 self.assertIn("| " + source + " |", policy)
 
+    def test_example_domains_are_catalog_ids(self):
+        catalog = {d["id"] for d in tools.load_catalog()["domains"]}
+        used = {f["domain"] for f in self.report["findings"]} | {c["domain"] for c in self.report["coverage"]}
+        self.assertLessEqual(used, catalog)
+
+    def test_unknown_finding_domain_rejected(self):
+        self.report["findings"][0]["domain"] = "retry"  # typo of catalog ID "retries"
+        self.rejected("finding.F-01.domain: unknown domain retry")
+
+    def test_unknown_coverage_domain_rejected(self):
+        self.report["coverage"][0]["domain"] = "made-up"
+        self.rejected("coverage.made-up.domain: unknown domain")
+
+    def test_custom_domain_prefix_accepted(self):
+        self.report["findings"][0]["domain"] = "custom:payments-ledger"
+        self.report["coverage"].append({"domain": "custom:payments-ledger", "status": "reviewed", "reason": "Ledger excerpt supplied."})
+        self.assertEqual([], tools.validate_report(self.report))
+
+    def test_empty_custom_prefix_rejected(self):
+        self.report["findings"][0]["domain"] = "custom:  "
+        self.rejected("unknown domain")
+
+    def test_injected_catalog_is_used(self):
+        catalog = {"domains": [{"id": "only-domain"}]}
+        errors = tools.validate_report(self.report, catalog=catalog)
+        self.assertTrue(any("unknown domain retries" in e for e in errors), errors)
+
+    def test_requires_mitigation_without_risk_findings_rejected(self):
+        self.report.update(findings=[], action_items=[], tests=[], verdict="requires_mitigation")
+        self.rejected("requires_mitigation needs at least one")
+
+    def test_requires_mitigation_with_only_gaps_rejected(self):
+        self.report["findings"] = [f for f in self.report["findings"] if f["classification"] == "evidence_gap"]
+        kept = {a for f in self.report["findings"] for a in f["action_ids"]}
+        self.report["action_items"] = [a for a in self.report["action_items"] if a["id"] in kept]
+        self.report["tests"] = [t for t in self.report["tests"] if set(t["action_ids"]) <= kept]
+        self.assertTrue(self.report["findings"])
+        self.rejected("requires_mitigation needs at least one")
+
+    def test_insufficient_evidence_with_unknown_coverage_accepted(self):
+        self.report.update(findings=[], action_items=[], tests=[], verdict="insufficient_evidence")
+        self.assertEqual([], tools.validate_report(self.report))  # example coverage has an "unknown" domain
+
+    def test_insufficient_evidence_without_basis_rejected(self):
+        self.report.update(findings=[], action_items=[], tests=[], verdict="insufficient_evidence")
+        for item in self.report["coverage"]:
+            item["status"] = "reviewed"
+        self.rejected("insufficient_evidence needs a finding or coverage marked unknown")
+
+    def test_error_paths_include_record_ids(self):
+        self.report["artifacts"][0]["label"] = ""
+        self.report["validated_controls"][0]["boundary"] = ""
+        artifact_id = self.report["artifacts"][0]["id"]
+        control_id = self.report["validated_controls"][0]["id"]
+        self.rejected(f"artifact.{artifact_id}.label")
+        self.rejected(f"control.{control_id}.boundary")
+
+    def test_missing_id_falls_back_to_index(self):
+        del self.report["action_items"][1]["id"]
+        self.rejected("action_items[1].id")
+        self.report["action_items"][1]["owner_role"] = ""
+        self.rejected("action[1].owner_role")
+
 
 if __name__ == "__main__":
     unittest.main()

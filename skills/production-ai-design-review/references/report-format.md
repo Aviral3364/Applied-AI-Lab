@@ -7,7 +7,7 @@ Use UTF-8 JSON. Scripts use Python 3.10+ without dependencies. Field names/enums
 - `schema_version`: integer `1`.
 - `system`, `scope`, `summary`: nonempty strings. State review boundary and decision reasoning.
 - `reviewed_at`: ISO calendar date, not future. Use the actual review date.
-- `verdict`: `requires_mitigation`, `requires_validation`, `insufficient_evidence`, or `no_blocker_observed` (only within stated scope).
+- `verdict`: `requires_mitigation`, `requires_validation`, `insufficient_evidence`, or `no_blocker_observed` (only within stated scope). The verdict must be consistent with the findings: `requires_mitigation` needs at least one `confirmed_defect` or `plausible_risk`; `requires_validation` and `insufficient_evidence` need at least one finding or a coverage entry marked `unknown`; `no_blocker_observed` cannot coexist with critical/high findings.
 - `assumptions`, `limitations`: arrays of strings, empty when none.
 - `artifacts`, `sources`, `findings`, `action_items`, `tests`, `validated_controls`, `coverage`: arrays of objects. Coverage must have at least one item; the other arrays may be empty for an appropriately scoped review.
 
@@ -24,6 +24,7 @@ IDs are nonempty unique strings within their record collection. References must 
 **Finding:**
 
 - `id`, `title`, `domain`, `mechanism`, `impact`, `severity_rationale`, `likelihood_rationale`: nonempty strings.
+- `domain`: a domain `id` from [risk-catalog.json](risk-catalog.json), or `custom:<name>` for a system-specific concern outside the catalog.
 - `classification`: `confirmed_defect`, `plausible_risk`, `evidence_gap`.
 - `severity`: `critical`, `high`, `medium`, `low`, `unknown`.
 - `confidence`: `low`, `medium`, `high`.
@@ -44,7 +45,7 @@ IDs are nonempty unique strings within their record collection. References must 
 
 **Validated control:** `id`, `description`, `boundary` strings; `basis` in `artifact_inspection`, `test_observation`, `production_observation`; nonempty `evidence` array. Validation is limited to this evidence and boundary.
 
-**Coverage:** `domain`, `reason` strings; `status` in `reviewed`, `unknown`, `not_applicable`. Unknown is not equivalent to reviewed-safe; exclusions need capability-specific reasons.
+**Coverage:** `domain` (catalog ID or `custom:<name>`, unique), `reason` strings; `status` in `reviewed`, `unknown`, `not_applicable`. Unknown is not equivalent to reviewed-safe; exclusions need capability-specific reasons.
 
 ## Usage
 

@@ -12,14 +12,25 @@ ROOT = Path(__file__).resolve().parents[1]
 KINDS = {"confirmed_defect", "plausible_risk", "evidence_gap"}
 SEVERITIES = {"critical", "high", "medium", "low", "unknown"}
 VERDICTS = {"requires_mitigation", "requires_validation", "insufficient_evidence", "no_blocker_observed"}
+CUSTOM_DOMAIN_PREFIX = "custom:"
 
 
-def validate_report(report):
+def load_catalog():
+    """Load the risk catalog shipped with the skill."""
+    return json.loads((ROOT / "references/risk-catalog.json").read_text(encoding="utf-8"))
+
+
+def validate_report(report, catalog=None):
     """Return all structural errors, including linkage and evidence contradictions."""
     errors = []
+    known_domains = {d["id"] for d in (catalog or load_catalog())["domains"]}
 
     def fail(path, message):
         errors.append(f"{path}: {message}")
+
+    def label(kind, item, index):
+        ident = item.get("id")
+        return f"{kind}.{ident}" if isinstance(ident, str) and ident.strip() else f"{kind}[{index}]"
 
     def obj(value, path):
         if not isinstance(value, dict):
@@ -44,6 +55,14 @@ def validate_report(report):
     def enum(value, options, path):
         if not isinstance(value, str) or value not in options:
             fail(path, f"must be one of {', '.join(sorted(options))}")
+
+    def domain(value, path):
+        text(value, path)
+        if not isinstance(value, str) or not value.strip() or value in known_domains:
+            return
+        custom = value.startswith(CUSTOM_DOMAIN_PREFIX) and value[len(CUSTOM_DOMAIN_PREFIX):].strip()
+        if not custom:
+            fail(path, f"unknown domain {value}; use a risk-catalog ID or '{CUSTOM_DOMAIN_PREFIX}<name>'")
 
     def records(key):
         value = report.get(key)
@@ -114,105 +133,112 @@ def validate_report(report):
                 text(entry.get(field), f"{path}[{i}].{field}")
         return value
 
-    for item in artifacts:
+    for i, item in enumerate(artifacts):
+        p = label("artifact", item, i)
         for field in ("label", "version", "basis"):
-            text(item.get(field), f"artifact.{field}")
-    for item in sources:
-        ident = item.get("id", "?")
+            text(item.get(field), f"{p}.{field}")
+    for i, item in enumerate(sources):
+        p = label("source", item, i)
         for field in ("publisher", "claim", "version"):
-            text(item.get(field), f"source.{ident}.{field}")
-        enum(item.get("status"), {"verified", "unverified"}, f"source.{ident}.status")
-        enum(item.get("authority"), {"official_primary", "unverified"}, f"source.{ident}.authority")
+            text(item.get(field), f"{p}.{field}")
+        enum(item.get("status"), {"verified", "unverified"}, f"{p}.status")
+        enum(item.get("authority"), {"official_primary", "unverified"}, f"{p}.authority")
         url = item.get("url")
         try:
             parts = urlsplit(url) if isinstance(url, str) else None
             if not parts or parts.scheme != "https" or not parts.hostname or parts.username or parts.password:
                 raise ValueError()
         except ValueError:
-            fail(f"source.{ident}.url", "must be an HTTPS URL without embedded credentials")
+            fail(f"{p}.url", "must be an HTTPS URL without embedded credentials")
         if item.get("status") == "verified":
             if item.get("authority") != "official_primary":
-                fail(f"source.{ident}", "verified external evidence must be official_primary")
-            iso_date(item.get("verified_at"), f"source.{ident}.verified_at")
+                fail(f"{p}", "verified external evidence must be official_primary")
+            iso_date(item.get("verified_at"), f"{p}.verified_at")
         elif item.get("verified_at") is not None:
-            fail(f"source.{ident}.verified_at", "must be null when unverified")
+            fail(f"{p}.verified_at", "must be null when unverified")
 
-    for item in findings:
-        ident = item.get("id", "?")
+    for i, item in enumerate(findings):
+        ident = item.get("id")
+        p = label("finding", item, i)
         kind = item.get("classification")
-        enum(kind, KINDS, f"finding.{ident}.classification")
-        enum(item.get("severity"), SEVERITIES, f"finding.{ident}.severity")
-        enum(item.get("confidence"), {"low", "medium", "high"}, f"finding.{ident}.confidence")
-        for field in ("title", "domain", "mechanism", "impact", "severity_rationale", "likelihood_rationale"):
-            text(item.get(field), f"finding.{ident}.{field}")
-        evidence(item.get("evidence"), f"finding.{ident}.evidence", 1 if kind == "confirmed_defect" else 0)
-        assumptions = texts(item.get("assumptions"), f"finding.{ident}.assumptions")
-        missing = texts(item.get("missing_evidence"), f"finding.{ident}.missing_evidence")
+        enum(kind, KINDS, f"{p}.classification")
+        enum(item.get("severity"), SEVERITIES, f"{p}.severity")
+        enum(item.get("confidence"), {"low", "medium", "high"}, f"{p}.confidence")
+        for field in ("title", "mechanism", "impact", "severity_rationale", "likelihood_rationale"):
+            text(item.get(field), f"{p}.{field}")
+        domain(item.get("domain"), f"{p}.domain")
+        evidence(item.get("evidence"), f"{p}.evidence", 1 if kind == "confirmed_defect" else 0)
+        assumptions = texts(item.get("assumptions"), f"{p}.assumptions")
+        missing = texts(item.get("missing_evidence"), f"{p}.missing_evidence")
         if kind == "plausible_risk" and not assumptions:
-            fail(f"finding.{ident}", "plausible risk requires explicit assumptions")
+            fail(f"{p}", "plausible risk requires explicit assumptions")
         if kind == "evidence_gap" and not missing:
-            fail(f"finding.{ident}", "evidence gap must name missing evidence")
-        refs = links(item.get("source_ids"), "sources", f"finding.{ident}.source_ids")
+            fail(f"{p}", "evidence gap must name missing evidence")
+        refs = links(item.get("source_ids"), "sources", f"{p}.source_ids")
         if kind == "confirmed_defect":
             for ref in refs:
                 if groups["sources"].get(ref, {}).get("status") != "verified":
-                    fail(f"finding.{ident}", "confirmed external support must be verified")
-        action_refs = links(item.get("action_ids"), "action_items", f"finding.{ident}.action_ids", 1)
+                    fail(f"{p}", "confirmed external support must be verified")
+        action_refs = links(item.get("action_ids"), "action_items", f"{p}.action_ids", 1)
         for ref in action_refs:
             linked = groups["action_items"].get(ref, {}).get("finding_ids", [])
             if not isinstance(linked, list) or ident not in linked:
-                fail(f"finding.{ident}", f"action {ref} must link back to finding")
+                fail(f"{p}", f"action {ref} must link back to finding")
 
-    for item in actions:
-        ident = item.get("id", "?")
-        enum(item.get("priority"), {"contain_now", "before_release", "scheduled", "investigate"}, f"action.{ident}.priority")
-        enum(item.get("kind"), {"containment", "mitigation", "investigation"}, f"action.{ident}.kind")
+    for i, item in enumerate(actions):
+        ident = item.get("id")
+        p = label("action", item, i)
+        enum(item.get("priority"), {"contain_now", "before_release", "scheduled", "investigate"}, f"{p}.priority")
+        enum(item.get("kind"), {"containment", "mitigation", "investigation"}, f"{p}.kind")
         for field in ("owner_role", "component", "change", "rationale", "tradeoffs", "failure_behavior", "recovery", "residual_risk"):
-            text(item.get(field), f"action.{ident}.{field}")
-        refs = links(item.get("finding_ids"), "findings", f"action.{ident}.finding_ids", 1)
-        links(item.get("source_ids"), "sources", f"action.{ident}.source_ids")
-        links(item.get("depends_on"), "action_items", f"action.{ident}.depends_on")
+            text(item.get(field), f"{p}.{field}")
+        refs = links(item.get("finding_ids"), "findings", f"{p}.finding_ids", 1)
+        links(item.get("source_ids"), "sources", f"{p}.source_ids")
+        links(item.get("depends_on"), "action_items", f"{p}.depends_on")
         if isinstance(item.get("depends_on"), list) and ident in item["depends_on"]:
-            fail(f"action.{ident}", "cannot depend on itself")
-        test_refs = links(item.get("test_ids"), "tests", f"action.{ident}.test_ids", 1)
+            fail(f"{p}", "cannot depend on itself")
+        test_refs = links(item.get("test_ids"), "tests", f"{p}.test_ids", 1)
         for ref in refs:
             linked = groups["findings"].get(ref, {}).get("action_ids", [])
             if not isinstance(linked, list) or ident not in linked:
-                fail(f"action.{ident}", f"finding {ref} must link back to action")
+                fail(f"{p}", f"finding {ref} must link back to action")
         for ref in test_refs:
             linked = groups["tests"].get(ref, {}).get("action_ids", [])
             if not isinstance(linked, list) or ident not in linked:
-                fail(f"action.{ident}", f"test {ref} must link back to action")
+                fail(f"{p}", f"test {ref} must link back to action")
 
-    for item in tests:
-        ident = item.get("id", "?")
-        enum(item.get("status"), {"proposed", "passed", "failed", "not_run"}, f"test.{ident}.status")
+    for i, item in enumerate(tests):
+        ident = item.get("id")
+        p = label("test", item, i)
+        enum(item.get("status"), {"proposed", "passed", "failed", "not_run"}, f"{p}.status")
         for field in ("setup", "stimulus", "expected", "collect"):
-            text(item.get(field), f"test.{ident}.{field}")
-        refs = links(item.get("action_ids"), "action_items", f"test.{ident}.action_ids", 1)
-        evidence(item.get("result_evidence"), f"test.{ident}.result_evidence", 1 if item.get("status") in ("passed", "failed") else 0)
+            text(item.get(field), f"{p}.{field}")
+        refs = links(item.get("action_ids"), "action_items", f"{p}.action_ids", 1)
+        evidence(item.get("result_evidence"), f"{p}.result_evidence", 1 if item.get("status") in ("passed", "failed") else 0)
         if item.get("status") in ("proposed", "not_run") and item.get("result_evidence"):
-            fail(f"test.{ident}", "unrun tests cannot have claimed result evidence")
+            fail(f"{p}", "unrun tests cannot have claimed result evidence")
         for ref in refs:
             linked = groups["action_items"].get(ref, {}).get("test_ids", [])
             if not isinstance(linked, list) or ident not in linked:
-                fail(f"test.{ident}", f"action {ref} must link back to test")
+                fail(f"{p}", f"action {ref} must link back to test")
 
-    for item in controls:
+    for i, item in enumerate(controls):
+        p = label("control", item, i)
         for field in ("description", "boundary"):
-            text(item.get(field), f"control.{field}")
-        enum(item.get("basis"), {"artifact_inspection", "test_observation", "production_observation"}, "control.basis")
-        evidence(item.get("evidence"), "control.evidence", 1)
+            text(item.get(field), f"{p}.{field}")
+        enum(item.get("basis"), {"artifact_inspection", "test_observation", "production_observation"}, f"{p}.basis")
+        evidence(item.get("evidence"), f"{p}.evidence", 1)
     seen_domains = set()
-    for item in coverage:
-        domain = item.get("domain")
-        text(domain, "coverage.domain")
-        enum(item.get("status"), {"reviewed", "unknown", "not_applicable"}, "coverage.status")
-        text(item.get("reason"), "coverage.reason")
-        if isinstance(domain, str):
-            if domain in seen_domains:
-                fail("coverage", f"duplicate domain {domain}")
-            seen_domains.add(domain)
+    for i, item in enumerate(coverage):
+        name = item.get("domain")
+        p = f"coverage.{name}" if isinstance(name, str) and name.strip() else f"coverage[{i}]"
+        domain(name, f"{p}.domain")
+        enum(item.get("status"), {"reviewed", "unknown", "not_applicable"}, f"{p}.status")
+        text(item.get("reason"), f"{p}.reason")
+        if isinstance(name, str):
+            if name in seen_domains:
+                fail("coverage", f"duplicate domain {name}")
+            seen_domains.add(name)
     if not coverage:
         fail("coverage", "must describe reviewed/unknown/excluded scope")
     remaining = {
@@ -226,9 +252,16 @@ def validate_report(report):
             fail("action_items", "dependency cycle among " + ", ".join(sorted(remaining)))
             break
         remaining = {ident: refs - ready for ident, refs in remaining.items() if ident not in ready}
-    if report.get("verdict") == "no_blocker_observed":
+    verdict = report.get("verdict")
+    if verdict == "no_blocker_observed":
         if any(f.get("severity") in ("critical", "high") for f in findings):
             fail("verdict", "unresolved high/critical findings contradict no_blocker_observed")
+    if verdict == "requires_mitigation" and not any(
+            f.get("classification") in ("confirmed_defect", "plausible_risk") for f in findings):
+        fail("verdict", "requires_mitigation needs at least one confirmed_defect or plausible_risk finding")
+    if verdict in ("requires_validation", "insufficient_evidence") and not findings \
+            and not any(c.get("status") == "unknown" for c in coverage):
+        fail("verdict", f"{verdict} needs a finding or coverage marked unknown")
     return errors
 
 
@@ -277,7 +310,7 @@ def render_report(report):
 
 
 def select_domains(capabilities):
-    catalog = json.loads((ROOT / "references/risk-catalog.json").read_text(encoding="utf-8"))
+    catalog = load_catalog()
     selected = set(capabilities)
     unknown = selected - set(catalog["capabilities"])
     if unknown:
